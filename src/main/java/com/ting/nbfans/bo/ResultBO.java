@@ -1,4 +1,4 @@
-package com.ting.nbfans.BO;
+package com.ting.nbfans.bo;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

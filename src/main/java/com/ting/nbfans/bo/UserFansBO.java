@@ -1,4 +1,4 @@
-package com.ting.nbfans.BO;
+package com.ting.nbfans.bo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 public class UserFansBO {
 
     @JsonProperty("mid")
-    private Integer mid;
+    private String mid;
     @JsonProperty("following")
     private Integer following;
     @JsonProperty("whisper")

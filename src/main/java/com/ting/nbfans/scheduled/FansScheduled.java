@@ -1,23 +1,15 @@
 package com.ting.nbfans.scheduled;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
-import com.ting.nbfans.BO.ResultBO;
-import com.ting.nbfans.BO.UserFansBO;
-import com.ting.nbfans.BO.UserInfoBO;
 import com.ting.nbfans.common.BilibiliUrl;
-import com.ting.nbfans.dao.Vup;
-import com.ting.nbfans.dao.VupFans;
-import com.ting.nbfans.mapper.VupFansMapper;
-import com.ting.nbfans.mapper.VupMapper;
+import com.ting.nbfans.dao.VupFan;
+import com.ting.nbfans.mapper.VupFanMapper;
+import com.ting.nbfans.sevice.INbFansService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,34 +17,34 @@ import java.util.List;
 public class FansScheduled {
 
     @Autowired
-    private VupMapper vupMapper;
+    private INbFansService nbFansService;
 
     @Autowired
-    private VupFansMapper vupFansMapper;
+    private VupFanMapper vupFanMapper;
 
-    @Autowired
-    private RestTemplate restTemplate;
-
-    @Scheduled(cron = "0 0 0 * * ?")
+    @Scheduled(cron = "1 0 0 * * ?")
     public void getFans() {
+        List<VupFan> fans = this.nbFansService.getFans(true);
 
-        String nowDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        List<VupFans> vupFans = this.vupFansMapper.findByRecordTime(nowDate);
-        Iterable<Vup> all = this.vupMapper.findAll();
-        List<VupFans> fans = new ArrayList<>();
-        for (Vup vup : all) {
-            String uid = vup.getUid();
-            String fansUrl = String.format(BilibiliUrl.FANS_URL_FORMAT, vup.getUid());
-            ResponseEntity<Object> forEntity = this.restTemplate.getForEntity(fansUrl, Object.class);
-            ResultBO<UserFansBO> result = JSON.parseObject(JSON.toJSONString(forEntity.getBody()), new TypeReference<ResultBO<UserFansBO>>() {
-            });
-            if (vupFans == null) {
-
+        // 跟新前一天的数据用户历史数据的对比
+        List<VupFan> preFansList = new ArrayList<>();
+        for (VupFan fan : fans) {
+            String uid = fan.getUid();
+            String recordTime = fan.getRecordTime();
+            LocalDate parse = LocalDate.parse(recordTime, BilibiliUrl.FORMATTER);
+            String preRecordTime = parse.plusDays(-1).format(BilibiliUrl.FORMATTER);
+            VupFan preVupFun = this.vupFanMapper.getByRecordTimeAndAndUid(preRecordTime, uid);
+            if (preVupFun != null) {
+                preVupFun.setFinalCaptainNum(fan.getCaptainNum());
+                preVupFun.setFollower(fan.getFollower());
+                preFansList.add(preVupFun);
             }
+
         }
-
+        if (!CollectionUtils.isEmpty(preFansList)) {
+            this.vupFanMapper.saveAllAndFlush(preFansList);
+        }
     }
 
-    public static void main(String[] args) {
-    }
+
 }

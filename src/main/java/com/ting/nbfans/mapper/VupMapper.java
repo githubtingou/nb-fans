@@ -1,7 +1,9 @@
 package com.ting.nbfans.mapper;
 
 import com.ting.nbfans.dao.Vup;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface VupMapper extends CrudRepository<Vup, Integer> {
+@Repository
+public interface VupMapper extends JpaRepository<Vup, String> {
 }

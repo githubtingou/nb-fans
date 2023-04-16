@@ -1,6 +1,10 @@
 package com.ting.nbfans.sevice;
 
 
+import com.ting.nbfans.dao.VupFan;
+
+import java.util.List;
+
 public interface INbFansService {
 
     /**
@@ -17,4 +21,19 @@ public interface INbFansService {
      */
     String getAll();
 
+    /**
+     * 获取关注数量和舰长数量
+     *
+     * @param isInsert
+     * @return
+     */
+    List<VupFan> getFans(Boolean isInsert);
+
+    /**
+     * 获取俩天的对比
+     *
+     * @param days
+     * @return
+     */
+    String getDay(String days);
 }

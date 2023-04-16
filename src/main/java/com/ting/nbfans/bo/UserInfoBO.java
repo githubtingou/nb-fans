@@ -1,4 +1,4 @@
-package com.ting.nbfans.BO;
+package com.ting.nbfans.bo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 public class UserInfoBO {
 
     @JsonProperty("mid")
-    private Integer mid;
+    private String mid;
     @JsonProperty("name")
     private String name;
     @JsonProperty("sex")
@@ -97,11 +97,11 @@ public class UserInfoBO {
         @Data
         public static class MedalDTO {
             @JsonProperty("uid")
-            private Integer uid;
+            private String uid;
             @JsonProperty("target_id")
             private Long targetId;
             @JsonProperty("medal_id")
-            private Integer medalId;
+            private String medalId;
             @JsonProperty("level")
             private Integer level;
             @JsonProperty("medal_name")
@@ -206,7 +206,7 @@ public class UserInfoBO {
     @Data
     public static class PendantDTO {
         @JsonProperty("pid")
-        private Integer pid;
+        private String pid;
         @JsonProperty("name")
         private String name;
         @JsonProperty("image")
@@ -223,7 +223,7 @@ public class UserInfoBO {
     @Data
     public static class NameplateDTO {
         @JsonProperty("nid")
-        private Integer nid;
+        private String nid;
         @JsonProperty("name")
         private String name;
         @JsonProperty("image")
@@ -265,7 +265,7 @@ public class UserInfoBO {
         @JsonProperty("cover")
         private String cover;
         @JsonProperty("roomid")
-        private Integer roomid;
+        private String roomid;
         @JsonProperty("roundStatus")
         private Integer roundStatus;
         @JsonProperty("broadcast_type")
