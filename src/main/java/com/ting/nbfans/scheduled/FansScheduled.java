@@ -36,7 +36,7 @@ public class FansScheduled {
             VupFan preVupFun = this.vupFanMapper.getByRecordTimeAndAndUid(preRecordTime, uid);
             if (preVupFun != null) {
                 preVupFun.setFinalCaptainNum(fan.getCaptainNum());
-                preVupFun.setFollower(fan.getFollower());
+                preVupFun.setFinalFollower(fan.getFollower());
                 preFansList.add(preVupFun);
             }
 
