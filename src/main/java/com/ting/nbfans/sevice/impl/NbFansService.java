@@ -13,7 +13,6 @@ import com.ting.nbfans.dao.VupFan;
 import com.ting.nbfans.mapper.VupFanMapper;
 import com.ting.nbfans.mapper.VupMapper;
 import com.ting.nbfans.sevice.INbFansService;
-import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -90,13 +89,14 @@ public class NbFansService implements INbFansService {
         if (CollectionUtils.isEmpty(all)) {
             return "没有内置数据，请先内置数据";
         }
-        StringBuilder stringBuilder = new StringBuilder();
+        Map<Integer, String> sortMap = new LinkedHashMap<>();
 
         Map<String, VupFan> newInfo = newFans.stream().collect(Collectors.toMap(VupFan::getUid, Function.identity(), (vupFan, vupFan2) -> vupFan));
         if (CollectionUtils.isEmpty(recordTime)) {
             for (Vup vup : all) {
                 VupFan vupFan = newInfo.get(vup.getId());
-                stringBuilder.append(String.format(BilibiliUrl.RESULT_INFO_FORMAT, vup.getUserName(), vupFan.getFollower(), "+0", vupFan.getCaptainNum(), "+0"));
+                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT, vup.getUserName(), vupFan.getFollower(), "+0", vupFan.getCaptainNum(), "+0");
+                sortMap.put(0, format);
             }
             this.vupFanMapper.saveAllAndFlush(newFans);
 
@@ -113,19 +113,23 @@ public class NbFansService implements INbFansService {
                 }
                 int addFollowerNum = newFan.getFollower() - Optional.ofNullable(oldFan.getFollower()).orElse(0);
                 int addCaptainNum = newFan.getCaptainNum() - Optional.ofNullable(oldFan.getCaptainNum()).orElse(0);
-                stringBuilder.append(String.format(BilibiliUrl.RESULT_INFO_FORMAT,
+                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT,
                         vup.getUserName(),
                         newFan.getFollower(),
                         addFollowerNum >= 0 ? "+" + addFollowerNum : addFollowerNum,
                         newFan.getCaptainNum(),
-                        addCaptainNum >= 0 ? "+" + addCaptainNum : addCaptainNum));
+                        addCaptainNum >= 0 ? "+" + addCaptainNum : addCaptainNum);
+                sortMap.put(addFollowerNum, format);
             }
             if (!CollectionUtils.isEmpty(insertFans)) {
                 this.vupFanMapper.saveAllAndFlush(insertFans);
             }
         }
 
-        return stringBuilder.toString();
+        return sortMap.entrySet().stream()
+                .sorted((o1, o2) -> o2.getKey() - o1.getKey())
+                .map(Map.Entry::getValue)
+                .collect(Collectors.joining());
     }
 
     @Override
@@ -203,6 +207,7 @@ public class NbFansService implements INbFansService {
 
     @Override
     public String getDay(String days) {
+        Map<Integer, String> sortMap = new LinkedHashMap<>();
         String nowDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         days = Optional.ofNullable(days).orElse(LocalDate.now().plusDays(-1).format(BilibiliUrl.FORMATTER));
         // 如果是当天直接返回实时数据
@@ -221,7 +226,6 @@ public class NbFansService implements INbFansService {
                 .orElseGet(ArrayList::new)
                 .stream().collect(Collectors.toMap(VupFan::getUid, Function.identity(), (vupFan, vupFan2) -> vupFan));
 
-        StringBuilder stringBuilder = new StringBuilder();
         for (Vup vup : vupList) {
             String id = vup.getId();
             VupFan vupFan = vupFanMap.get(id);
@@ -230,22 +234,30 @@ public class NbFansService implements INbFansService {
                 Integer finalCaptainNum = Optional.ofNullable(vupFan.getFinalCaptainNum()).orElse(vupFan.getCaptainNum());
                 int addFollowerNum = finalFollower - vupFan.getFollower();
                 int addCaptainNum = finalCaptainNum - vupFan.getCaptainNum();
-                stringBuilder.append(String.format(BilibiliUrl.RESULT_INFO_FORMAT,
+                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT,
                         vup.getUserName(),
                         vupFan.getFinalFollower(),
                         addFollowerNum >= 0 ? "+" + addFollowerNum : addFollowerNum,
-                        vupFan.getFinalFollower(),
-                        addCaptainNum >= 0 ? "+" + addCaptainNum : addCaptainNum));
+                        vupFan.getFinalCaptainNum(),
+                        addCaptainNum >= 0 ? "+" + addCaptainNum : addCaptainNum);
+
+                sortMap.put(addFollowerNum, format);
             } else {
-                stringBuilder.append(String.format(BilibiliUrl.RESULT_INFO_FORMAT,
+                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT,
                         "暂未收录" + vup.getUserName() + days + "时间段的数据：",
                         0,
                         0,
                         0,
-                        0));
+                        0);
+                sortMap.put(0, format);
+
             }
         }
-        return stringBuilder.toString();
+
+        return sortMap.entrySet().stream()
+                .sorted((o1, o2) -> o2.getKey() - o1.getKey())
+                .map(Map.Entry::getValue)
+                .collect(Collectors.joining());
     }
 
 }
