@@ -3,10 +3,7 @@ package com.ting.nbfans.sevice.impl;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-import com.ting.nbfans.bo.LiveInfoBO;
-import com.ting.nbfans.bo.ResultBO;
-import com.ting.nbfans.bo.UserFansBO;
-import com.ting.nbfans.bo.UserInfoBO;
+import com.ting.nbfans.bo.*;
 import com.ting.nbfans.common.BilibiliUrl;
 import com.ting.nbfans.dao.Vup;
 import com.ting.nbfans.dao.VupFan;
@@ -89,14 +86,23 @@ public class NbFansService implements INbFansService {
         if (CollectionUtils.isEmpty(all)) {
             return "没有内置数据，请先内置数据";
         }
-        Map<Integer, String> sortMap = new LinkedHashMap<>();
+        List<NbfansBO> nbfansBOListO = new ArrayList<>(all.size());
 
         Map<String, VupFan> newInfo = newFans.stream().collect(Collectors.toMap(VupFan::getUid, Function.identity(), (vupFan, vupFan2) -> vupFan));
         if (CollectionUtils.isEmpty(recordTime)) {
             for (Vup vup : all) {
-                VupFan vupFan = newInfo.get(vup.getId());
+                String vupId = vup.getId();
+                VupFan vupFan = newInfo.get(vupId);
                 String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT, vup.getUserName(), vupFan.getFollower(), "+0", vupFan.getCaptainNum(), "+0");
-                sortMap.put(0, format);
+
+                NbfansBO nbfansBO = new NbfansBO();
+                nbfansBO.setUid(vupId);
+                nbfansBO.setUserName(vup.getUserName());
+                nbfansBO.setFinalFollower(0);
+                nbfansBO.setAddFollowerNum(0);
+                nbfansBO.setFinalCaptainNum(0);
+                nbfansBO.setAddCaptainNum(0);
+                nbfansBOListO.add(nbfansBO);
             }
             this.vupFanMapper.saveAllAndFlush(newFans);
 
@@ -111,26 +117,29 @@ public class NbFansService implements INbFansService {
                     oldFan = newFan;
                     insertFans.add(newFan);
                 }
+
+
                 int addFollowerNum = newFan.getFollower() - Optional.ofNullable(oldFan.getFollower()).orElse(0);
                 int addCaptainNum = newFan.getCaptainNum() - Optional.ofNullable(oldFan.getCaptainNum()).orElse(0);
-                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT,
-                        vup.getUserName(),
-                        newFan.getFollower(),
-                        addFollowerNum >= 0 ? "+" + addFollowerNum : addFollowerNum,
-                        newFan.getCaptainNum(),
-                        addCaptainNum >= 0 ? "+" + addCaptainNum : addCaptainNum);
-                sortMap.put(addFollowerNum, format);
+
+                NbfansBO nbfansBO = new NbfansBO();
+                nbfansBO.setUid(id);
+                nbfansBO.setUserName(vup.getUserName());
+                nbfansBO.setFinalFollower(newFan.getFollower());
+                nbfansBO.setAddFollowerNum(addFollowerNum);
+                nbfansBO.setFinalCaptainNum(newFan.getCaptainNum());
+                nbfansBO.setAddCaptainNum(addCaptainNum);
+                nbfansBOListO.add(nbfansBO);
+
             }
             if (!CollectionUtils.isEmpty(insertFans)) {
                 this.vupFanMapper.saveAllAndFlush(insertFans);
             }
         }
 
-        return sortMap.entrySet().stream()
-                .sorted((o1, o2) -> o2.getKey() - o1.getKey())
-                .map(Map.Entry::getValue)
-                .collect(Collectors.joining());
+        return this.sortListByAddFollower(nbfansBOListO);
     }
+
 
     @Override
     public List<VupFan> getFans(Boolean isInsert) {
@@ -207,7 +216,6 @@ public class NbFansService implements INbFansService {
 
     @Override
     public String getDay(String days) {
-        Map<Integer, String> sortMap = new LinkedHashMap<>();
         String nowDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         days = Optional.ofNullable(days).orElse(LocalDate.now().plusDays(-1).format(BilibiliUrl.FORMATTER));
         // 如果是当天直接返回实时数据
@@ -222,6 +230,7 @@ public class NbFansService implements INbFansService {
             return "没有内置用户";
         }
 
+        List<NbfansBO> nbfansBOListO = new ArrayList<>(vupList.size());
         Map<String, VupFan> vupFanMap = Optional.ofNullable(oldList)
                 .orElseGet(ArrayList::new)
                 .stream().collect(Collectors.toMap(VupFan::getUid, Function.identity(), (vupFan, vupFan2) -> vupFan));
@@ -234,30 +243,43 @@ public class NbFansService implements INbFansService {
                 Integer finalCaptainNum = Optional.ofNullable(vupFan.getFinalCaptainNum()).orElse(vupFan.getCaptainNum());
                 int addFollowerNum = finalFollower - vupFan.getFollower();
                 int addCaptainNum = finalCaptainNum - vupFan.getCaptainNum();
-                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT,
-                        vup.getUserName(),
-                        vupFan.getFinalFollower(),
-                        addFollowerNum >= 0 ? "+" + addFollowerNum : addFollowerNum,
-                        vupFan.getFinalCaptainNum(),
-                        addCaptainNum >= 0 ? "+" + addCaptainNum : addCaptainNum);
 
-                sortMap.put(addFollowerNum, format);
+                NbfansBO nbfansBO = new NbfansBO();
+                nbfansBO.setUid(id);
+                nbfansBO.setUserName(vup.getUserName());
+                nbfansBO.setFinalFollower(vupFan.getFinalFollower());
+                nbfansBO.setAddFollowerNum(addFollowerNum);
+                nbfansBO.setFinalCaptainNum(vupFan.getFinalCaptainNum());
+                nbfansBO.setAddCaptainNum(addCaptainNum);
+                nbfansBOListO.add(nbfansBO);
+
+
             } else {
-                String format = String.format(BilibiliUrl.RESULT_INFO_FORMAT,
-                        "暂未收录" + vup.getUserName() + days + "时间段的数据：",
-                        0,
-                        0,
-                        0,
-                        0);
-                sortMap.put(0, format);
+                NbfansBO nbfansBO = new NbfansBO();
+                nbfansBO.setUid(id);
+                nbfansBO.setUserName("暂未收录" + vup.getUserName() + days + "时间段的数据：");
+                nbfansBO.setFinalFollower(0);
+                nbfansBO.setAddFollowerNum(0);
+                nbfansBO.setFinalCaptainNum(0);
+                nbfansBO.setAddCaptainNum(0);
+                nbfansBOListO.add(nbfansBO);
+
 
             }
         }
 
-        return sortMap.entrySet().stream()
-                .sorted((o1, o2) -> o2.getKey() - o1.getKey())
-                .map(Map.Entry::getValue)
-                .collect(Collectors.joining());
+        return this.sortListByAddFollower(nbfansBOListO);
     }
 
+    private String sortListByAddFollower(List<NbfansBO> nbfansBOListO) {
+        return nbfansBOListO.stream()
+                .sorted(Comparator.comparing(NbfansBO::getAddFollowerNum).reversed())
+                .map(nbfansBO -> String.format(BilibiliUrl.RESULT_INFO_FORMAT,
+                        nbfansBO.getUserName(),
+                        nbfansBO.getFinalFollower(),
+                        nbfansBO.getAddFollowerNum() >= 0 ? "+" + nbfansBO.getAddFollowerNum() : nbfansBO.getAddFollowerNum(),
+                        nbfansBO.getFinalCaptainNum(),
+                        nbfansBO.getAddCaptainNum() >= 0 ? "+" + nbfansBO.getAddCaptainNum() : nbfansBO.getAddCaptainNum()))
+                .collect(Collectors.joining());
+    }
 }
