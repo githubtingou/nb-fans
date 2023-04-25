@@ -8,7 +8,7 @@ import java.util.List;
 
 @NoArgsConstructor
 @Data
-public class fansGroupBO {
+public class FansGroupBO {
 
     @JsonProperty("item")
     private List<ItemDTO> item;

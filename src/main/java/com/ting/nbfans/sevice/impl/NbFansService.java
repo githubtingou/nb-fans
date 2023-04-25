@@ -191,18 +191,18 @@ public class NbFansService implements INbFansService {
                     });
 
                     // 获取粉丝团数量
-                    CompletableFuture<ResultBO<fansGroupBO>> fansGroupResult = CompletableFuture.supplyAsync(() -> {
+                    CompletableFuture<ResultBO<FansGroupBO>> fansGroupResult = CompletableFuture.supplyAsync(() -> {
                         String fansGroupUrl = String.format(BilibiliUrl.FAN_GROUP_URL_FORMAT, uid);
                         String fansGroupValue = HttpUtil.get(fansGroupUrl);
 
-                        return JSON.parseObject(fansGroupValue, new TypeReference<ResultBO<fansGroupBO>>() {
+                        return JSON.parseObject(fansGroupValue, new TypeReference<ResultBO<FansGroupBO>>() {
                         });
                     });
 
                     CompletableFuture.allOf(fansResult, liveResult, fansGroupResult).join();
                     ResultBO<UserFansBO> userFansBOResultBO = fansResult.get();
                     ResultBO<LiveInfoBO> liveInfoBOResultBO = liveResult.get();
-                    ResultBO<fansGroupBO> fansGroupBOResultBO = fansGroupResult.get();
+                    ResultBO<FansGroupBO> fansGroupBOResultBO = fansGroupResult.get();
 
                     // 封装数据
                     VupFan info = new VupFan();
