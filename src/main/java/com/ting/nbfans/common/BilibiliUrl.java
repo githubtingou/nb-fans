@@ -25,9 +25,25 @@ public interface BilibiliUrl {
     String LIVE_INFO_FORMAT = "https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList?roomid=%s&page=1&ruid=%s&page_size=1";
 
     /**
+     * 粉丝团数量
+     */
+    String FAN_GROUP_URL_FORMAT = "https://api.live.bilibili.com/xlive/general-interface/v1/rank/getFansMembersRank?ruid=%s&page=1&page_size=1";
+
+
+    /**
+     * 模板
+     */
+    String RESULT_BASIC_INFO_FORMAT = "%s：粉丝数量%s（%s）\n";
+
+    /**
      * 模板
      */
     String RESULT_INFO_FORMAT = "%s：粉丝数量%s（%s） 舰长数量：%s（%s）\n";
+
+    /**
+     * 模板
+     */
+    String RESULT_ALL_INFO_FORMAT = "%s：粉丝数量%s（%s） 舰长数量：%s（%s） 粉丝团数量：%s（%s）\n";
 
     DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 

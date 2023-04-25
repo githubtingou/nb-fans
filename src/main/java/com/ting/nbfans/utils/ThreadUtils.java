@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
  */
 @Configuration
 public class ThreadUtils {
-    private static final int CORE_SIZE = Runtime.getRuntime().availableProcessors();
 
+    private static final int CORE_SIZE = Runtime.getRuntime().availableProcessors();
 
     @Bean(name = "executor")
     public ThreadPoolExecutor executor() {

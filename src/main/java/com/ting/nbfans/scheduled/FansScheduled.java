@@ -26,7 +26,7 @@ public class FansScheduled {
     public void getFans() {
         List<VupFan> fans = this.nbFansService.getFans(true);
 
-        // 跟新前一天的数据用户历史数据的对比
+        // 跟前一天的数据用户历史数据的对比
         List<VupFan> preFansList = new ArrayList<>();
         for (VupFan fan : fans) {
             String uid = fan.getUid();
@@ -37,6 +37,7 @@ public class FansScheduled {
             if (preVupFun != null) {
                 preVupFun.setFinalCaptainNum(fan.getCaptainNum());
                 preVupFun.setFinalFollower(fan.getFollower());
+                preVupFun.setFinalFansGroupNum(fan.getFansGroupNum());
                 preFansList.add(preVupFun);
             }
 

@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Function;
@@ -41,6 +42,7 @@ public class NbFansService implements INbFansService {
     @Override
     public void add(String uid) {
         if (StringUtils.hasLength(uid)) {
+            Date date = new Date();
             // 获取用户信息
             String[] uidList = uid.split(",");
             CountDownLatch downLatch = new CountDownLatch(uidList.length);
@@ -57,6 +59,7 @@ public class NbFansService implements INbFansService {
                         vup.setId(String.valueOf(data.getMid()));
                         vup.setUserName(data.getName());
                         vup.setLiveId(String.valueOf(data.getLiveRoom().getRoomid()));
+                        vup.setUpdateTime(date);
                         vupList.add(vup);
                     } finally {
                         downLatch.countDown();
@@ -102,6 +105,8 @@ public class NbFansService implements INbFansService {
                 nbfansBO.setAddFollowerNum(0);
                 nbfansBO.setFinalCaptainNum(0);
                 nbfansBO.setAddCaptainNum(0);
+                nbfansBO.setFansGroupNum(0);
+                nbfansBO.setAddGroupNum(0);
                 nbfansBOListO.add(nbfansBO);
             }
             this.vupFanMapper.saveAllAndFlush(newFans);
@@ -121,6 +126,7 @@ public class NbFansService implements INbFansService {
 
                 int addFollowerNum = newFan.getFollower() - Optional.ofNullable(oldFan.getFollower()).orElse(0);
                 int addCaptainNum = newFan.getCaptainNum() - Optional.ofNullable(oldFan.getCaptainNum()).orElse(0);
+                int addGroupNum = newFan.getFansGroupNum() - Optional.ofNullable(oldFan.getFansGroupNum()).orElse(0);
 
                 NbfansBO nbfansBO = new NbfansBO();
                 nbfansBO.setUid(id);
@@ -129,6 +135,8 @@ public class NbFansService implements INbFansService {
                 nbfansBO.setAddFollowerNum(addFollowerNum);
                 nbfansBO.setFinalCaptainNum(newFan.getCaptainNum());
                 nbfansBO.setAddCaptainNum(addCaptainNum);
+                nbfansBO.setFansGroupNum(newFan.getFansGroupNum());
+                nbfansBO.setAddGroupNum(addGroupNum);
                 nbfansBOListO.add(nbfansBO);
 
             }
@@ -167,24 +175,44 @@ public class NbFansService implements INbFansService {
                     String liveId = vup.getLiveId();
 
                     // 获取关注数量
-                    String fansUrl = String.format(BilibiliUrl.FANS_URL_FORMAT, uid);
-                    String value = HttpUtil.get(fansUrl);
-                    ResultBO<UserFansBO> result = JSON.parseObject(value, new TypeReference<ResultBO<UserFansBO>>() {
+                    CompletableFuture<ResultBO<UserFansBO>> fansResult = CompletableFuture.supplyAsync(() -> {
+                        String fansUrl = String.format(BilibiliUrl.FANS_URL_FORMAT, uid);
+                        String value = HttpUtil.get(fansUrl);
+                        return JSON.parseObject(value, new TypeReference<ResultBO<UserFansBO>>() {
+                        });
                     });
 
                     // 获取舰长数量
-                    String liveUrl = String.format(BilibiliUrl.LIVE_INFO_FORMAT, liveId, uid);
-                    String liveUrlValue = HttpUtil.get(liveUrl);
-                    ResultBO<LiveInfoBO> liveResult = JSON.parseObject(liveUrlValue, new TypeReference<ResultBO<LiveInfoBO>>() {
+                    CompletableFuture<ResultBO<LiveInfoBO>> liveResult = CompletableFuture.supplyAsync(() -> {
+                        String liveUrl = String.format(BilibiliUrl.LIVE_INFO_FORMAT, liveId, uid);
+                        String liveUrlValue = HttpUtil.get(liveUrl);
+                        return JSON.parseObject(liveUrlValue, new TypeReference<ResultBO<LiveInfoBO>>() {
+                        });
                     });
+
+                    // 获取粉丝团数量
+                    CompletableFuture<ResultBO<fansGroupBO>> fansGroupResult = CompletableFuture.supplyAsync(() -> {
+                        String fansGroupUrl = String.format(BilibiliUrl.FAN_GROUP_URL_FORMAT, uid);
+                        String fansGroupValue = HttpUtil.get(fansGroupUrl);
+
+                        return JSON.parseObject(fansGroupValue, new TypeReference<ResultBO<fansGroupBO>>() {
+                        });
+                    });
+
+                    CompletableFuture.allOf(fansResult, liveResult, fansGroupResult).join();
+                    ResultBO<UserFansBO> userFansBOResultBO = fansResult.get();
+                    ResultBO<LiveInfoBO> liveInfoBOResultBO = liveResult.get();
+                    ResultBO<fansGroupBO> fansGroupBOResultBO = fansGroupResult.get();
 
                     // 封装数据
                     VupFan info = new VupFan();
                     info.setUid(uid);
                     info.setRecordTime(nowDate);
-                    info.setFollower(result.getData().getFollower());
-                    LiveInfoBO data = liveResult.getData();
+                    info.setFollower(userFansBOResultBO.getData().getFollower());
+                    LiveInfoBO data = liveInfoBOResultBO.getData();
                     info.setCaptainNum(data.getInfo().getNum());
+                    info.setFansGroupNum(fansGroupBOResultBO.getData().getNum());
+
                     if (finalFansMap.get(uid) != null) {
                         info.setId(finalFansMap.get(uid).getId());
                     }
@@ -241,8 +269,10 @@ public class NbFansService implements INbFansService {
             if (vupFan != null) {
                 Integer finalFollower = Optional.ofNullable(vupFan.getFinalFollower()).orElse(vupFan.getFollower());
                 Integer finalCaptainNum = Optional.ofNullable(vupFan.getFinalCaptainNum()).orElse(vupFan.getCaptainNum());
+                Integer finalGroupNum = Optional.ofNullable(vupFan.getFinalFansGroupNum()).orElse(vupFan.getFansGroupNum());
                 int addFollowerNum = finalFollower - vupFan.getFollower();
                 int addCaptainNum = finalCaptainNum - vupFan.getCaptainNum();
+                int addGroupNum = finalGroupNum - vupFan.getFansGroupNum();
 
                 NbfansBO nbfansBO = new NbfansBO();
                 nbfansBO.setUid(id);
@@ -251,6 +281,8 @@ public class NbFansService implements INbFansService {
                 nbfansBO.setAddFollowerNum(addFollowerNum);
                 nbfansBO.setFinalCaptainNum(vupFan.getFinalCaptainNum());
                 nbfansBO.setAddCaptainNum(addCaptainNum);
+                nbfansBO.setFansGroupNum(vupFan.getFinalFansGroupNum());
+                nbfansBO.setAddGroupNum(addGroupNum);
                 nbfansBOListO.add(nbfansBO);
 
 
@@ -261,7 +293,8 @@ public class NbFansService implements INbFansService {
                 nbfansBO.setFinalFollower(0);
                 nbfansBO.setAddFollowerNum(0);
                 nbfansBO.setFinalCaptainNum(0);
-                nbfansBO.setAddCaptainNum(0);
+                nbfansBO.setFansGroupNum(0);
+                nbfansBO.setAddGroupNum(0);
                 nbfansBOListO.add(nbfansBO);
 
 
@@ -274,12 +307,15 @@ public class NbFansService implements INbFansService {
     private String sortListByAddFollower(List<NbfansBO> nbfansBOListO) {
         return nbfansBOListO.stream()
                 .sorted(Comparator.comparing(NbfansBO::getAddFollowerNum).reversed())
-                .map(nbfansBO -> String.format(BilibiliUrl.RESULT_INFO_FORMAT,
+                .map(nbfansBO -> String.format(BilibiliUrl.RESULT_ALL_INFO_FORMAT,
                         nbfansBO.getUserName(),
                         nbfansBO.getFinalFollower(),
                         nbfansBO.getAddFollowerNum() >= 0 ? "+" + nbfansBO.getAddFollowerNum() : nbfansBO.getAddFollowerNum(),
                         nbfansBO.getFinalCaptainNum(),
-                        nbfansBO.getAddCaptainNum() >= 0 ? "+" + nbfansBO.getAddCaptainNum() : nbfansBO.getAddCaptainNum()))
+                        nbfansBO.getAddCaptainNum() >= 0 ? "+" + nbfansBO.getAddCaptainNum() : nbfansBO.getAddCaptainNum(),
+                        nbfansBO.getFansGroupNum(),
+                        nbfansBO.getAddGroupNum() >= 0 ? "+" + nbfansBO.getAddGroupNum() : nbfansBO.getAddGroupNum())
+                )
                 .collect(Collectors.joining());
     }
 }

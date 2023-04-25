@@ -10,5 +10,7 @@ public class NbfansBO {
     private Integer addFollowerNum;
     private Integer finalCaptainNum;
     private Integer addCaptainNum;
+    private Integer fansGroupNum;
+    private Integer addGroupNum;
 
 }
